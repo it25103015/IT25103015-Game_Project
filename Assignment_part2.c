@@ -10,7 +10,7 @@
 #define MAX_LIVES_COLLECTABLE 2
 #define Player1_Symbol '@'
 #define Player2_Symbol '&'
-#define Wall '#'
+#define WALL '#'
 #define Intel 'I'
 #define Lives 'L'
 #define Extraction_Point 'X'
@@ -73,7 +73,7 @@ void display_movement_instructions(); // reminds the user of the movement keys' 
 int choose_game_mode(); // functions to allow the user to choose whether he likes to play with  computer or a laptop.
 char get_computer_move(); // function that return the computer's move if the user has chosen to play with computer.
 int main(){
-         srand(time(NULL)); // This function ensures each game produces random numbers for the placement of items in the grid.
+         srand((unsigned int)time(NULL)); // This function ensures each game produces random numbers for the placement of items in the grid.
         if(initialise_log_file() == 0) { // creates the log file to store game status after each move by the user.
                                      printf("Error creating log file!Exiting program!Try again!");
                                      return 1;
@@ -150,12 +150,12 @@ void display_movement_instructions(){
     printf("  'S' to move down by one cell.\n");
     printf("  'D' to move right by one cell.\n");
     printf("  'Q' to quit the game.\n\n");
-    printf("  '%c' - Your position in the grid!\n", Player_Symbol);
-    printf("  '%c' - Wall (You need to avoid these!)\n", Wall);
-    printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", Intel);
-    printf("  '%c' - Extra Life (collect to increase lives)\n", Lives);
-    printf("  '%c' - Extraction Point (reach after collecting all Intel)\n", Extraction_Point);
-    printf("  '%c' - Empty space (safe to move through)\n\n", Empty_Space);
+    printf("  '%c' - Your position in the grid!\n", PLAYER_SYMBOL);
+    printf("  '%c' - Wall (You need to avoid these!)\n", WALL);
+    printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", INTEL);
+    printf("  '%c' - Extra Life (collect to increase lives)\n", LIVES);
+    printf("  '%c' - Extraction Point (reach after collecting all Intel)\n", EXTRACTION_POINT);
+    printf("  '%c' - Empty space (safe to move through)\n\n", EMPTY_SPACE);
 }
 void display_game_instructions() {
    /* This function displays the instructions that needs to followed during the game*/
@@ -182,12 +182,12 @@ void display_game_instructions() {
     printf("  'Q' to quit the game.\n\n");
 
     printf("Please take note of the game symbols that will be used to represent the game grid:\n");
-    printf("  '%c' - Your position in the grid!\n", Player_Symbol);
-    printf("  '%c' - Wall (You need to avoid these!)\n", Wall);
-    printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", Intel);
-    printf("  '%c' - Extra Life (collect to increase lives)\n", Lives);
-    printf("  '%c' - Extraction Point (reach after collecting all Intel)\n", Extraction_Point);
-    printf("  '%c' - Empty space (safe to move through)\n\n", Empty_Space);
+    printf("  '%c' - Your position in the grid!\n", PLAYER_SYMBOL);
+    printf("  '%c' - Wall (You need to avoid these!)\n", WALL);
+    printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", INTEL);
+    printf("  '%c' - Extra Life (collect to increase lives)\n", LIVES);
+    printf("  '%c' - Extraction Point (reach after collecting all Intel)\n", EXTRACTION_POINT);
+    printf("  '%c' - Empty space (safe to move through)\n\n", EMPTY_SPACE);
 
     printf("Ok, those are all the instructions!\n");
     printf("I wish you good luck winning this game, player!\n");
@@ -222,10 +222,10 @@ int validate_move_2player(GameState *game,char direction){
                       }
                       if(new_x < 0 || new_x >= game->grid->N || new_y < 0 || new_y >= game->grid->N) // checks if user is within the grid
                                                                          return 0;
-                      if(game->grid->grid[new_x][new_y] == Wall) // check if user has collided with a wall;
+                      if(game->grid->grid[new_x][new_y] == WALL) // check if user has collided with a wall;
                                                                return 0;
                       char target_cell = game->grid->grid[new_x][new_y]; // checks the cell that has been updated
-                      if (target_cell == Player1_Symbol || target_cell == Player2_Symbol) {  // if the updated cell already has the symbol of Player1 or Player2 it cannot be placed.
+                      if (target_cell == Player1_Symbol || target_cell == PLAYER2_SYMBOL) {  // if the updated cell already has the symbol of Player1 or Player2 it cannot be placed.
                              
                                for (int i = 0; i < MAX_PLAYERS; i++) { // finds which player is at that position
                                           if (i != game->current_player && game->players[i].is_active && game->players[i].position.x == new_x && game->players[i].position.y == new_y) {
@@ -253,19 +253,19 @@ void handle_invalid_move_2player(GameState *game){
 void collect_item(GameState *game,int x,int y){
                       char Item = game ->grid ->grid[x][y]; // stores the Item available at the player's position in the game grid.
                       switch(Item) { // checks which Item it is : Intel or Life.
-                                   case Intel :
+                                   case INTEL :
                                               game->grid->Intel_Remaining--; // if Intel then the number of Intels to be displayed in the game grid decreases by 1.
                                               game->player.intel_collected++; // if Intel then the number of Intels collected by the player increases by 1/
                                               printf("You have collected an Intel! The total of collected intel is :%d \n",game->player.intel_collected); // notifies the player that they have successfully collected an intel.
                                               break;
-                                   case Lives :
+                                   case LIVES :
                                               game->grid->Lives_Remaining--; // if Life then the number of Lives to be displayed in the game grid decreases by 1
                                               game->player.total_lives++; // if Life then the total number of Lives collected by the Player increases by 1.
                                               printf("You have collected a live! You have a total of : %d\n",game-> player.total_lives); // notifies the player the total number of lives they have.
                                               break;
                                    }
-                                   if (Item == Intel || Item == Lives)
-                                                                   game->grid->grid[x][y] = Empty_Space; // removes the item after it is collected by the player.
+                                   if (Item == INTEL || Item == LIVES)
+                                                                   game->grid->grid[x][y] = EMPTY_SPACE; // removes the item after it is collected by the player.
 }
 int initialise_log_file(){
                       FILE *fptr = fopen(LOG_FILE,"w"); // creates a file to log the game state.
@@ -315,7 +315,7 @@ Grid * create_grid(int n) {
                                              return NULL; // return NULL becasue row allocation has caused the creation of Game Grid to stop.
                              }
                              for(int j = 0;j < n; j++) // if memory allocation of the Game Grid array succeed then this is executed.
-                                           grid->grid[i][j] = Empty_Space; // initialises all cells in this row to Empty_Space symbol.
+                                           grid->grid[i][j] = EMPTY_SPACE; // initialises all cells in this row to Empty_Space symbol.
                 }
                 return grid;// returns the successfully created grid.
 }
@@ -454,8 +454,8 @@ void generate_walls(Grid* grid){
                                       do {
                                            x =  random_number_generator(0, grid->N -1); // uses the random_number_generator function to generate a random x co-ordinate.
                                            y =  random_number_generator(0, grid->N -1); // uses the random_number_generator function to generate a random y co-ordinate.
-                                         } while(grid->grid[x][y] != Empty_Space); // this loop continues to generate random values of x and y values until the location in the grid is not an empty space
-                                      grid->grid[x][y] = Wall; // Once the random x and y co-ordinates have been successfully generated,a wall is tha placed at that location in the grid.
+                                         } while(grid->grid[x][y] != EMPTY_SPACE); // this loop continues to generate random values of x and y values until the location in the grid is not an empty space
+                                      grid->grid[x][y] = WALL; // Once the random x and y co-ordinates have been successfully generated,a wall is tha placed at that location in the grid.
               }
 }
 void place_items_randomly_2player(Grid *grid,Player players[2]) {
@@ -464,8 +464,8 @@ void place_items_randomly_2player(Grid *grid,Player players[2]) {
                do {
                     grid->extraction.x = random_number_generator(0, grid->N -1); // generates a random x co-ordinate for the Extraction Point.            
                     grid->extraction.y = random_number_generator(0, grid->N -1);    // generates a random y co-ordinate for the Extraction Point. 
-               } while(grid->grid[grid->extraction.x][grid->extraction.y] != Empty_Space); //this loop continues to generate random values of x and y values until the location in the grid is not an empty space
-               grid->grid[grid->extraction.x][grid->extraction.y] = Extraction_Point; // // Once the random x and y co-ordinates have been successfully generated,an extraction point is tha placed at that location in the grid.
+               } while(grid->grid[grid->extraction.x][grid->extraction.y] != EMPTY_SPACE); //this loop continues to generate random values of x and y values until the location in the grid is not an empty space
+               grid->grid[grid->extraction.x][grid->extraction.y] = EXTRACTION_POINT; // // Once the random x and y co-ordinates have been successfully generated,an extraction point is tha placed at that location in the grid.
 
               /* same logic is applied to place Intels*/
                for(int i = 0;i < MAX_INTEL_COLLECTABLE;i++){
@@ -473,8 +473,8 @@ void place_items_randomly_2player(Grid *grid,Player players[2]) {
                                       do {
                                             x = random_number_generator(0, grid->N -1);
                                             y = random_number_generator(0, grid->N -1);
-                                      } while (grid->grid[x][y] != Empty_Space);
-                                      grid->grid[x][y] = Intel;
+                                      } while (grid->grid[x][y] != EMPTY_SPACE);
+                                      grid->grid[x][y] = INTEL;
                }
 
                /* same logic is applied to place Lives*/
@@ -484,22 +484,22 @@ void place_items_randomly_2player(Grid *grid,Player players[2]) {
                                       do {
                                             x = random_number_generator(0, grid->N -1);
                                             y = random_number_generator(0, grid->N -1);
-                                      } while (grid->grid[x][y] != Empty_Space);
-                                      grid->grid[x][y] = Lives;
+                                      } while (grid->grid[x][y] != EMPTY_SPACE);
+                                      grid->grid[x][y] = LIVES;
                }
 
                /* same logic is applied to generate and place the starting point for the Player1 and Player2*/
                do {
                     players[0].position.x = random_number_generator(0, grid->N -1);
                     players[0].position.y = random_number_generator(0, grid->N -1);
-               } while(grid->grid[players[0].position.x][players[0].position.y] != Empty_Space);
-               grid->grid[players[0].position.x][players[0].position.y] = Player1_Symbol; // Once the co-ordinates of Player1 is decided,Player's symbol is placed at the position.
+               } while(grid->grid[players[0].position.x][players[0].position.y] != EMPTY_SPACE);
+               grid->grid[players[0].position.x][players[0].position.y] = PLAYER1_SYMBOL; // Once the co-ordinates of Player1 is decided,Player's symbol is placed at the position.
               
                do {
                     players[1].position.x = random_number_generator(0, grid->N -1);
                     players[1].position.y = random_number_generator(0, grid->N -1);
-               } while(grid->grid[players[1].position.x][players[1].position.y] != Empty_Space || (players[1].position.x == players[0].position.x && players[1].position.y == players[0].position.y)); // checks whether the position of Player 2 is not an Empty Space and does not contradict with the position of Player 1.
-               grid->grid[players[1].position.x][players[1].position.y] = Player2_Symbol; // Once the co-ordinates of Player2 is decided,Player 2's symbol is placed at the position.
+               } while(grid->grid[players[1].position.x][players[1].position.y] != EMPTY_SPACE || (players[1].position.x == players[0].position.x && players[1].position.y == players[0].position.y)); // checks whether the position of Player 2 is not an Empty Space and does not contradict with the position of Player 1.
+               grid->grid[players[1].position.x][players[1].position.y] = PLAYER2_SYMBOL; // Once the co-ordinates of Player2 is decided,Player 2's symbol is placed at the position.
 
  }
 int initialise_game_2player(GameState *game, int grid_size,int player2_is_computer) {
@@ -583,16 +583,16 @@ void update_player_state_2player(GameState *game,char direction){
 
 
               char new_position  = game->grid->grid[new_x_coordinate][new_y_coordinate]; // the new cell's  item in the Game Grid is stored in the variable.
-               if(game->grid->grid[old_x_coordinate][old_y_coordinate] != Extraction_Point) // check if the old location in the Game Grid wasn't a Extraction Point.(X)
-                                              game->grid->grid[old_x_coordinate][old_y_coordinate] = Empty_Space; // if yes then,an empty space is added since the player has left that position.
+               if(game->grid->grid[old_x_coordinate][old_y_coordinate] != EXTRACTION_POINT) // check if the old location in the Game Grid wasn't a Extraction Point.(X)
+                                              game->grid->grid[old_x_coordinate][old_y_coordinate] = EMPTY_SPACE; // if yes then,an empty space is added since the player has left that position.
 
               /* in the position structure,the new x and y values of the Player is updated.*/
                  current->position.x = new_x_coordinate;
                  current->position.y = new_y_coordinate;
-              if(new_position == Intel || new_position == Lives) //checks if there is an Intel or a Life in the new position
+              if(new_position == INTEL || new_position == LIVES) //checks if there is an Intel or a Life in the new position
                                              collect_item_2player(game,new_x_coordinate,new_y_coordinate); // calls the function collect_item to collect the item
 
-              if (new_position != Extraction_Point) // check if the new position is not an Extraction Point(X)
+              if (new_position != EXTRACTION_POINT) // check if the new position is not an Extraction Point(X)
                                              game->grid->grid[new_x_coordinate][new_y_coordinate] = current -> symbol; // places the Player_Symbol to mark that the new position of the player in the game,
 
 
