@@ -8,14 +8,15 @@
 #define MAX_GRID_SIZE 15
 #define MAX_INTEL_COLLECTABLE 3
 #define MAX_LIVES_COLLECTABLE 2
-#define Player1_Symbol '@'
-#define Player2_Symbol '&'
+#define PLAYER1_SYMBOL '@'
+#define PLAYER2_SYMBOL '&'
 #define WALL '#'
-#define Intel 'I'
-#define Lives 'L'
-#define Extraction_Point 'X'
-#define Empty_Space '.'
+#define INTEL 'I'
+#define LIVES 'L'
+#define EXTRACTION_POINT 'X'
+#define EMPTY_SPACE '.'
 #define LOG_FILE "spynet_game_state.txt"
+#define MAX_PLAYERS 2
 
 typedef struct {
           int x; // Position in the row of the grid
@@ -52,12 +53,12 @@ typedef struct {
 /* declaration of all the functions used in this program are given below*/
 Grid * create_grid(int n); //a function that creates a grid and return a memory address of the grid
 void clear_grid(Grid* grid); // frees all memory to prevent memory leakage
-void place_items_randomly_2player(Grid *grid,Player players );// sets the intel.lives,walls,extraction and the staring position of the two players
+void place_items_randomly_2player(Grid *grid,Player players[2]);// sets the intel.lives,walls,extraction and the staring position of the two players
 void generate_walls(Grid* grid);// a function to generate the walls in the grid
 void display_grid(Grid *grid); // a function to display the grid
-int initialise_game_2player(GameState *game,int grid_size);// starts the game for the two players
-void display_all_player_status(Player *player); // displays the players' status every time before a player makes his move
-void display_game_instructions(void);// displays the instructions of the game to the players
+int initialise_game_2player(GameState *game,int grid_size,int player2_computer);// starts the game for the two players
+void display_all_player_status(GameState *game); // displays the players' status every time before a player makes his move
+void display_game_instructions_2player();// displays the instructions of the game to the players
 char get_movement_key(void); // a function that returns the user's input of movement
 int validate_move_2player(GameState* game, char direction);
 void handle_invalid_move_2player(GameState *game); // penalises for invalid input by reducing player life and displaying warning message
@@ -82,9 +83,9 @@ int main(){
          int N = get_grid_size(); // gets the grid size from the user and stores it into variable 'N'
          
          int player2_type = choose_game_mode(); 
-         
+         int player2_computer = (player2_type == 2) ? 1 : 0 ;
          GameState game; // declare game as the game state structure.
-         if (initialise_game_2player(&game, N,player2_type) == 0) {  // checks if the grid was successfully created.
+         if (initialise_game_2player(&game, N,player2_computer) == 0) {  // checks if the grid was successfully created.
                                        printf("Failed to initialize game! Exiting.\n"); // if unsuccessful,it outputs an error message and exits the program.
                                        return 1;
          }
@@ -138,6 +139,7 @@ int main(){
                                if (game.game_terminated == 0) 
                                          game.current_player = (game.current_player + 1) % 2;  // switches to next player.
          }
+         display_all_player_status(&game); 
          show_game_results_2player(&game); // the game is terminated once a player has decided to quit the game,has lost the game or has used up all his/her lives.Afterwards this function is called to show the results of the game to the players.
 
          clear_grid(game.grid); // frees dynamically allocated memory to prevent memory leaks.
@@ -150,14 +152,15 @@ void display_movement_instructions(){
     printf("  'S' to move down by one cell.\n");
     printf("  'D' to move right by one cell.\n");
     printf("  'Q' to quit the game.\n\n");
-    printf("  '%c' - Your position in the grid!\n", PLAYER_SYMBOL);
+    printf("  '%c' - Player1's position in the grid!\n", PLAYER1_SYMBOL);
+    printf("  '%c' - Player2's position in the grid!\n", PLAYER2_SYMBOL);
     printf("  '%c' - Wall (You need to avoid these!)\n", WALL);
     printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", INTEL);
     printf("  '%c' - Extra Life (collect to increase lives)\n", LIVES);
     printf("  '%c' - Extraction Point (reach after collecting all Intel)\n", EXTRACTION_POINT);
     printf("  '%c' - Empty space (safe to move through)\n\n", EMPTY_SPACE);
 }
-void display_game_instructions() {
+void display_game_instructions_2player() {
    /* This function displays the instructions that needs to followed during the game*/
     printf("Welcome to the game: SpyNet - The Codebreaker Protocol!\n");
     printf("Please read and understand the instructions to this game carefully.\n");
@@ -182,7 +185,8 @@ void display_game_instructions() {
     printf("  'Q' to quit the game.\n\n");
 
     printf("Please take note of the game symbols that will be used to represent the game grid:\n");
-    printf("  '%c' - Your position in the grid!\n", PLAYER_SYMBOL);
+    printf("  '%c' - Player1's position in the grid!\n", PLAYER1_SYMBOL);
+    printf("  '%c' - Player2's position in the grid!\n", PLAYER2_SYMBOL);
     printf("  '%c' - Wall (You need to avoid these!)\n", WALL);
     printf("  '%c' - Intel (collect all 3 of these in the grid to win)\n", INTEL);
     printf("  '%c' - Extra Life (collect to increase lives)\n", LIVES);
@@ -225,7 +229,7 @@ int validate_move_2player(GameState *game,char direction){
                       if(game->grid->grid[new_x][new_y] == WALL) // check if user has collided with a wall;
                                                                return 0;
                       char target_cell = game->grid->grid[new_x][new_y]; // checks the cell that has been updated
-                      if (target_cell == Player1_Symbol || target_cell == PLAYER2_SYMBOL) {  // if the updated cell already has the symbol of Player1 or Player2 it cannot be placed.
+                      if (target_cell == PLAYER1_SYMBOL || target_cell == PLAYER2_SYMBOL) {  // if the updated cell already has the symbol of Player1 or Player2 it cannot be placed.
                              
                                for (int i = 0; i < MAX_PLAYERS; i++) { // finds which player is at that position
                                           if (i != game->current_player && game->players[i].is_active && game->players[i].position.x == new_x && game->players[i].position.y == new_y) {
@@ -242,30 +246,32 @@ void handle_invalid_move_2player(GameState *game){
 
                       current -> total_lives--; // decreases the total number of lives of that player by 1.
                      
-                      if(current ->total_lives<= 0){ // check if the current player has no lives remaining
-                                                      current -> total_lives = 0; // updates the current life of player to 0.
-                                                      current -> is_active = 0; // updates the value in player structure to indicate that the player is not active.
-                                                      game->active_players--; // decreases the total number of active players in the game by 1.
+                      if(current -> total_lives<= 0){ // check if the current player has no lives remaining
+                                                      current -> total_lives = 0; // updates the current life count of player to 0.
                                                       printf("Player %d has run out of lives!\n",game->current_player + 1); // outputs that the player who has run out of lives.
+                           
                       } else
                             printf("Player %d has %d lives remaining!\n",game->current_player + 1,current -> total_lives); // outputs the number of lives remaining if the player has lives.
 }
-void collect_item(GameState *game,int x,int y){
-                      char Item = game ->grid ->grid[x][y]; // stores the Item available at the player's position in the game grid.
-                      switch(Item) { // checks which Item it is : Intel or Life.
-                                   case INTEL :
-                                              game->grid->Intel_Remaining--; // if Intel then the number of Intels to be displayed in the game grid decreases by 1.
-                                              game->player.intel_collected++; // if Intel then the number of Intels collected by the player increases by 1/
-                                              printf("You have collected an Intel! The total of collected intel is :%d \n",game->player.intel_collected); // notifies the player that they have successfully collected an intel.
-                                              break;
-                                   case LIVES :
-                                              game->grid->Lives_Remaining--; // if Life then the number of Lives to be displayed in the game grid decreases by 1
-                                              game->player.total_lives++; // if Life then the total number of Lives collected by the Player increases by 1.
-                                              printf("You have collected a live! You have a total of : %d\n",game-> player.total_lives); // notifies the player the total number of lives they have.
-                                              break;
-                                   }
-                                   if (Item == INTEL || Item == LIVES)
-                                                                   game->grid->grid[x][y] = EMPTY_SPACE; // removes the item after it is collected by the player.
+void collect_item_2player(GameState *game, int x, int y) {
+                      Player *current = &game->players[game->current_player]; // creates a pointer names current store the current player's details
+                      char Item = game->grid->grid[x][y]; // locates the Item in the 2D grid.
+    
+                      switch(Item) { // decides which item is present in the location of the current player in the 2D Grid.
+                               case INTEL: // checks if there is an 'INTEL' that can be collected in the location.
+                                          game->grid->Intel_Remaining--; // decreases the number of Intel Remaining in the 2D Grid.
+                                          current->intel_collected++; // increases the number of Intel collected by the player in the 2D Grid.
+                                          printf("Player %d collected an Intel! Total: %d\n", game->current_player + 1 , current->intel_collected); // notifies the player that an intel was collected.
+                                          break;
+                              case LIVES: // check if a life is collectable in the current location of the player.
+                                          game->grid->Lives_Remaining--; // decrease number of lives remaining in the Grid by 1
+                                          current->total_lives++; // increases the total number of lives by 1.
+                                          printf("Player %d collected an extra life! Total lives: %d\n", game->current_player + 1, current->total_lives); // notifies the player that a life was collected!
+                                          break;
+                             }
+                             if (Item == INTEL || Item == LIVES) { 
+                                              game->grid->grid[x][y] = EMPTY_SPACE; // the life or the Intel is replaced by an empty space afterwards.
+                             }
 }
 int initialise_log_file(){
                       FILE *fptr = fopen(LOG_FILE,"w"); // creates a file to log the game state.
@@ -280,13 +286,19 @@ int random_number_generator(int min, int max) {
     return min + rand() % (max - min + 1); // this is the formula for generating random numbers
 }
 
-void display_player_status(Player *player) {
+void display_all_player_status(GameState *game) {
     printf("\n=== PLAYER STATUS ===\n");
-    printf("Position: (%d, %d)\n", player->position.x, player->position.y); // displays the current position of player in the game grid.
-    printf("Lives: %d\n", player->total_lives); // displays the number of lives,the player has
-    printf("Intel Collected: %d/%d, %d more to collect to win the game!\n", player->intel_collected, MAX_INTEL_COLLECTABLE,MAX_INTEL_COLLECTABLE - player->intel_collected); // displays the number of intels,the player has collected as a fraction.
-    printf("Total Moves: %d\n", player->moves_count); // displays the total number of moves made by the player so far.
-    printf("====================\n");
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        Player *p = &game->players[i];
+        printf("Player %d \n", i + 1); // identify which player's status is being displayed.
+        printf("You are at Position: (%d, %d)\n", p->position.x, p->position.y); 
+        printf("You have a total of %d Lives remaining!\n", p->total_lives);
+        printf("You have collected  %d/%d number of intels so far!\n", p->intel_collected, MAX_INTEL_COLLECTABLE);
+        printf("You have made a total of  %d number of moves!\n", p->moves_count);
+        printf("You are currently %s! \n", p->is_active ? "Active" : "Inactive");
+        printf("You are a : %s\n", p->is_computer ? "Computer" : "Human");
+        printf("\n");
+    }
 }
 Grid * create_grid(int n) {
                  Grid *grid = (Grid*)malloc(sizeof(Grid)); // dynamically allocates memory for the Grid Structure
@@ -425,7 +437,7 @@ void show_game_results_2player(GameState *game){
                               if(game ->players[1].is_computer)
                                                    printf("You have defeated the computer!Keep it up!\n");
                               else 
-                                                   printf("You have defeated Player2.keep it up!\n");
+                                                   printf("You have defeated Player2.\nKeep it up!\n");
                }
                else if(game-> winner == 1) {
                               printf("=== Player2 is the winner!=== \n Congratulations!\n");
@@ -516,7 +528,7 @@ int initialise_game_2player(GameState *game, int grid_size,int player2_is_comput
     game->players[0].intel_collected = 0;
     game->players[0].is_active = 1;
     game->players[0].moves_count = 0;
-    game->players[0].symbol = Player1_Symbol;
+    game->players[0].symbol = PLAYER1_SYMBOL;
     game->players[0].is_computer = 0;  // Player is always human
     
     /* Player 2 states are initialised accordingly*/
@@ -524,7 +536,7 @@ int initialise_game_2player(GameState *game, int grid_size,int player2_is_comput
     game->players[1].intel_collected = 0;
     game->players[1].is_active = 1;
     game->players[1].moves_count = 0;
-    game->players[1].symbol = Player2_Symbol;
+    game->players[1].symbol = PLAYER2_SYMBOL;
     game->players[1].is_computer = player2_is_computer;  //Based on user's choice this member's value alters.
    
     /* game state is initialised as follows. */
