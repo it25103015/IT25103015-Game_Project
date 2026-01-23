@@ -53,18 +53,22 @@ void display_grid(Grid *grid); // a function to display the grid
 int initialise_game(GameState *game,int grid_size);// starts the game
 void display_player_status(Player *player); // displays the player's status every time before a player makes his move
 void display_game_instructions(void);// displays the instructions of the game to the player
-char get_movement_key(void); // a function that returns the user's input of movement
+char get_movement_key(); // a function that returns the user's input of movement
 int validate_move(GameState* game, char direction);
 void handle_invalid_move(GameState *game); // penalises for invalid input by reducing player life and displaying warning message
 void collect_item(GameState *game,int x,int y); // updates player status accordingly whenever player collects intel or lives,removes the collected item from the grid and displays the item collected.
 void check_win_conditions(GameState *game);// checks whether the player has met the requirement to win the game.
-int initialise_log_file(void); // creates the log file to store game state
+int initialise_log_file(); // creates the log file to store game state
 void log_game_state(GameState *game,char* Action_Description);// saves the game state
 void update_player_state(GameState *game,char direction);// after each move,the position,lives and intel count and move is validated.
 int random_number_generator(int min,int max);// a function that generate a random number within a specified range
-int  get_grid_size(void); // Gets the grid size from the user
+int  get_grid_size(); // Gets the grid size from the user
 void show_game_results(GameState *game); // indicates to the player whether they won or lost the game.
-void display_movement_instructions();
+void display_movement_instructions(); // reminds the user the keys to press for each move they wish to make.
+void player_not_trapped(Grid* grid, Position player_pos); //ensures player is not completely trapped.(surrounded by walls)
+void ensure_items_accessible(Grid *grid); // ensures the items are collectable.(not surrounded by walls.)
+int is_cell_blocked(Grid *grid, int x, int y); // the function to check if a cell is blocked
+
 int main(){
          srand(time(NULL)); // This function ensures each game produces random numbers for the placement of items in the grid.
         if(initialise_log_file() == 0) { // creates the log file to store game status after each move by the user.
@@ -370,7 +374,7 @@ void show_game_results(GameState *game){
               
 void generate_walls(Grid* grid){
                int total_cells = grid->N * grid->N; // a variable to to store the total number of cells in the grid : N x N
-               int total_wall_number = total_cells/5; // the percentage of walls occupied in the grid is 20 percentage of the total number of cells.
+               int total_wall_number = total_cells/5; // the percentage of walls occupied in the grid is 20 percentage of the total number of cells. (20/100) is (1/5) hence we can just divide the total number of cells in the grid by 5...
                for(int i = 0;i < total_wall_number;i++){ // loop to place the walls 
                                       int x,y; // variables to store the x co-ordinate and y co-ordinate.
                                       do {
@@ -438,10 +442,9 @@ int initialise_game(GameState *game, int grid_size) {
     
     
     place_items_randomly(game->grid, &game->player.position); // places items and starting position of the player by calling this function.
-    
-    
+    ensure_items_accessible(game->grid); // if an item in the grid is blocked by all four walls,this function resolves by placing the item somewhere else. 
     game->grid->grid[game->player.position.x][game->player.position.y] = PLAYER_SYMBOL; // Places player's symbol at the the starting position.
-    
+    player_not_trapped(game->grid, game->player.position);// ensures the player is not trapped. 
     /* Initialize game state flags accordingly */
     game->game_terminated = 0;
     game->game_won = 0;
@@ -507,4 +510,127 @@ void update_player_state(GameState *game,char direction){
               printf("Moved %c to position ( %d , %d ) in the grid\n",direction,new_x_coordinate,new_y_coordinate); // notifies the user of their current location in the grid and the movement they decided to take.
 }
 
+void player_not_trapped(Grid* grid, Position player_pos) { //ensures player is not completely trapped.(surrounded by walls)
 
+    int possible_directions = 0; // calculates all the possible direction the player can take from his/her co-ordinates in the grid.
+    int wall_directions[4]; // keeps a record of which directions have walls (0: for up, 1 : for down, 2 : for left, 3 : for right)
+    int wall_count = 0; // keeps a recod of the numebr of walls found around the player
+
+    
+    if(player_pos.x > 0) { // checks if the player is not in the top row.
+        possible_directions++; // then since there is a possible direction for the player to move,it is incremented.
+        if(grid->grid[player_pos.x-1][player_pos.y] == WALL) { // check if the direction vertically "Upwards" to the player contains a wall.
+            wall_directions[wall_count] = 0; // Stored it in a array to keep record of where the wall are present arounff the player.(Left = 0)
+            wall_count++; // increases the count of walls surrounding the player since a wall was detected previously.
+        }
+    }
+
+   
+    if(player_pos.x < grid->N-1) { // check if player is not on the bottom row.
+        possible_directions++;  // then since there is a possible direction for the player to move,it is incremented.
+        if(grid->grid[player_pos.x+1][player_pos.y] == WALL) { // check if the direction vertically "Downwards" to the player contains a wall.
+
+            wall_directions[wall_count] = 1; // Stored it in a array to keep record of where the wall are present around the player.(Down - 1)
+            wall_count++; // increases the count of walls surrounding the player since a wall was detected  previously.
+        }
+    }
+
+  
+    if(player_pos.y > 0) { // checks if the player is not in the left-most corner of the grid.
+        possible_directions++; // then since there is a possible direction for the player to move,it is incremented.
+        if(grid->grid[player_pos.x][player_pos.y-1] == WALL) { // check if the direction "Leftwards" to the player contains a wall.
+            wall_directions[wall_count] = 2; // Stored it in a array to keep record of where the wall are present around the player.(Left - 2)
+            wall_count++; // increases the count of walls surrounding the player since a wall was detected previously.
+        }
+    }
+
+
+    if(player_pos.y < grid->N-1) { // checks if the player is not in the right-most corner of the grid.
+        possible_directions++; // then since there is a possible direction for the player to move,it is incremented.
+        if(grid->grid[player_pos.x][player_pos.y+1] == WALL) { // // check if the direction "Rightwards" to the player contains a wall.
+            wall_directions[wall_count] = 3; // Stored it in a array to keep record of where the wall are present around the player.(Right - 3)
+            wall_count++; // increases the count of walls surrounding the player since a wall was detected previously.
+        }
+    }
+
+    if(wall_count == possible_directions && possible_directions > 0) { // checks if there is a wall in all the possible directions the player can move and there is a possible direction to move.
+            int random_wall = rand() % wall_count; // generates a random number based on the number of walls surrounding the player,for example : 4 walls would generate a random bumber from 0 to 3.
+            int direction_to_remove = wall_directions[random_wall]; // takes the direction of the wall from the array.
+
+            switch(direction_to_remove) {
+                case 0: // checks if the wall vertically upwards is chosen.
+                    grid->grid[player_pos.x-1][player_pos.y] = EMPTY_SPACE; // replaces the wall by Empty Space in the location of the grid which is safer for the player to travel.
+                    break;
+                case 1: // checks if the wall vertically downwards is chosen.
+                    grid->grid[player_pos.x+1][player_pos.y] = EMPTY_SPACE; // replaces the wall by Empty Space in the location of the grid which is safer for the player to travel.
+                    break;
+                case 2: // checks if the wall leftwards is chosen.
+                    grid->grid[player_pos.x][player_pos.y-1] = EMPTY_SPACE; // replaces the wall by Empty Space in the location of the grid which is safer for the player to travel.
+                    break;
+                case 3: // checks if the wall rightwards is chosen.
+                    grid->grid[player_pos.x][player_pos.y+1] = EMPTY_SPACE; // replaces the wall by Empty Space in the location of the grid which is safer for the player to travel.
+                    break;
+            }
+            printf("Note: Removed one wall to free trapped player at (%d,%d)\n",player_pos.x, player_pos.y); // reassures the affected player that the one of the walls has been removed and he can play the game fairly.
+        }
+}
+  
+void ensure_items_accessible(Grid *grid) { // the function to address the issue of an item being inaccessible by any player in the game.
+
+    for(int i = 0; i < grid->N; i++) {
+        for(int j = 0; j < grid->N; j++) {
+            if(grid->grid[i][j] == INTEL || grid->grid[i][j] == LIVES) { // tracks all the lives and intels in the grid.
+                if(is_cell_blocked(grid, i, j)) { // checks if the cell containing the lives or intel is blocked.
+
+                    int new_x, new_y; // variables to store the new x  co-ordinate and  y co-ordinate.
+                    do {
+                        new_x = random_number_generator(0, grid->N - 1); // generates a random x co-ordinate.
+                        new_y = random_number_generator(0, grid->N - 1); // generate a random y co-ordinate.
+                    } while(grid->grid[new_x][new_y] != EMPTY_SPACE | is_cell_blocked(grid, new_x, new_y)); // the while loop terminates when the cell is not empty or the cell is not blocked.
+
+
+                    char item_type = grid->grid[i][j]; // stores the item that was detected to be blocked in a variable called 'item_type'
+                    grid->grid[i][j] = EMPTY_SPACE; // replaces the item with a empty space.
+                    grid->grid[new_x][new_y] = item_type; // stores the item in the new x and y co=ordinates.
+                    printf("Note: Moved %c from (%d,%d) to (%d,%d) for accessibility\n",item_type, i, j, new_x, new_y); // notifies the players that the issue has been resolved.
+                }
+            }
+        }
+    }
+}
+int is_cell_blocked(Grid *grid, int x, int y) { // the function to check if a cell is blocked
+    int possible_directions = 0;   // keeps a track of the number of possibe adjecent cells are present.
+    int wall_count = 0;           // keeps a track of the numebr of adjacent cells that are walls.
+    int is_blocked; // a variable to store whether the cell is blocked. ( 1 is blocked and 0 is not blocked.)
+
+    if(x > 0) {                    // checks if we are not in the first row of the grid( x = 0)
+        possible_directions++;     // increases the possible directions because there is valid cell.
+        if(grid->grid[x-1][y] == WALL) {  // checks if there is wall in that position of the grid in the cell one to the top.
+            wall_count++;          // increases the count of walls because a wall is detected.
+        }
+    }
+
+
+    if(x < grid->N - 1) {          // checks if we're not at the bottom edge of the grid.(x = N -1 is the last row)
+        possible_directions++;     // increases the possible directions because there is valid cell.
+        if(grid->grid[x+1][y] == WALL) {  // checks if there is wall in that position of the grid in the cell one to the downwards.
+            wall_count++;          // increases the count of walls because a wall is detected.
+        }
+    }
+    if(y > 0) {                    // checks if we're not at the left edge of the grid.(y = 0 is in the left edge of the the grid.)
+        possible_directions++;     // increases the possible directions because there is valid cell.
+        if(grid->grid[x][y-1] == WALL) {  // checks if there is wall in that position of the grid in the cell one to the left.
+            wall_count++;          // increases the count of walls because a wall is detected.
+        }
+    }
+
+
+    if(y < grid->N - 1) {          // checks if we're not at the right edge of the grid.(y = N - 1 is the right edge of the grid)
+        possible_directions++;     // increases the possible directions because there is valid cell.
+        if(grid->grid[x][y+1] == WALL) {  // checks if there is wall in that position of the grid in the cell one to the right.
+            wall_count++;          // increases the count of walls because a wall is detected.
+        }
+    }
+    is_blocked =  (possible_directions > 0) && (wall_count == possible_directions); // is there are possible directions to move and all of them are blocked then the cell is blocked(1) or else it is not blocked.(0)
+    return is_blocked; // the state of the cell(blocked or unblocked is returned by the function.)
+}
